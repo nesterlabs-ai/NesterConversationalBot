@@ -1,0 +1,35 @@
+# Voice RAG Assistant Configuration
+# This file contains the main configuration structure
+# Sensitive keys are loaded from environment variables
+
+stt:
+  provider: "deepgram"
+  config:
+    device: "cpu"
+    model: "small"
+    no_speech_prob: 0.3
+    api_key: "${DEEPGRAM_API_KEY}" 
+
+tts:
+  provider: "elevenlabs"
+  config:
+    api_key: "${ELEVENLABS_API_KEY}"
+    voice_id: "${ELEVENLABS_VOICE_ID}"
+
+input_analyzer:
+  custom_patterns:
+    greeting:
+      - '\bgood night\b'
+      - '\bsup\b'
+    feedback:
+      - '\bawesome\b'
+      - '\bperfect\b'
+
+rag:
+  type: "mock"  # Replace with actual RAG system type
+  config:
+    # Add your RAG system configuration here
+
+conversation:
+  llm:
+    api_key: "${GOOGLE_API_KEY}" 
