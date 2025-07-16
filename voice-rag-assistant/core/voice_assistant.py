@@ -14,12 +14,28 @@ from pipecat.pipeline.runner import PipelineRunner
 from pipecat.pipeline.task import PipelineParams, PipelineTask
 from pipecat.transports.base_transport import BaseTransport
 
-from services.speech_to_text import SpeechToTextService
-from services.text_to_speech import TextToSpeechService
-from services.input_analyzer import InputAnalyzer
-from services.rag_service import RAGService
-from services.conversation_manager import ConversationManager
-from services.latency_analyzer import LatencyAnalyzer
+try:
+    # Try relative imports first (when running as module)
+    from ..services.speech_to_text import SpeechToTextService
+    from ..services.text_to_speech import TextToSpeechService
+    from ..services.input_analyzer import InputAnalyzer
+    from ..services.rag_service import RAGService
+    from ..services.conversation_manager import ConversationManager
+    from ..services.latency_analyzer import LatencyAnalyzer
+except ImportError:
+    # Fall back to absolute imports (when running as script)
+    import sys
+    from pathlib import Path
+    
+    # Add the parent directory to the path
+    sys.path.insert(0, str(Path(__file__).parent.parent))
+    
+    from services.speech_to_text import SpeechToTextService
+    from services.text_to_speech import TextToSpeechService
+    from services.input_analyzer import InputAnalyzer
+    from services.rag_service import RAGService
+    from services.conversation_manager import ConversationManager
+    from services.latency_analyzer import LatencyAnalyzer
 from pipecat.processors.frameworks.rtvi import RTVIConfig, RTVIObserver, RTVIProcessor
 
 class VoiceAssistant:

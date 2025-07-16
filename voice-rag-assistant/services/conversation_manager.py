@@ -16,8 +16,20 @@ from pipecat.adapters.schemas.tools_schema import ToolsSchema
 from pipecat.processors.aggregators.openai_llm_context import OpenAILLMContext
 from pipecat.frames.frames import TTSSpeakFrame
 
-from services.input_analyzer import InputAnalyzer
-from services.rag_service import RAGService
+try:
+    # Try relative imports first (when running as module)
+    from .input_analyzer import InputAnalyzer
+    from .rag_service import RAGService
+except ImportError:
+    # Fall back to absolute imports (when running as script)
+    import sys
+    from pathlib import Path
+    
+    # Add the parent directory to the path
+    sys.path.insert(0, str(Path(__file__).parent.parent))
+    
+    from services.input_analyzer import InputAnalyzer
+    from services.rag_service import RAGService
 
 
 class ConversationManager:

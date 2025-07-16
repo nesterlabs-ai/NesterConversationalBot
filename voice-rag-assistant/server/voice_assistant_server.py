@@ -1,7 +1,6 @@
 """Voice Assistant Server class for handling WebSocket connections."""
 
 import os
-import asyncio
 from typing import Dict, Any
 
 from loguru import logger
@@ -12,7 +11,18 @@ from pipecat.transports.network.websocket_server import (
     WebsocketServerTransport,
 )
 
-from voice_assistant import VoiceAssistant
+try:
+    # Try relative imports first (when running as module)
+    from ..core.voice_assistant import VoiceAssistant
+except ImportError:
+    # Fall back to absolute imports (when running as script)
+    import sys
+    from pathlib import Path
+    
+    # Add the parent directory to the path
+    sys.path.insert(0, str(Path(__file__).parent.parent))
+    
+    from core.voice_assistant import VoiceAssistant
 
 
 class VoiceAssistantServer:
