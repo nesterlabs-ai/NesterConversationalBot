@@ -8,7 +8,7 @@ stt:
     device: "cpu"
     model: "small"
     no_speech_prob: 0.3
-    api_key: "${DEEPGRAM_API_KEY}" 
+    api_key: "${DEEPGRAM_API_KEY}"
 
 tts:
   provider: "elevenlabs"
@@ -28,7 +28,7 @@ input_analyzer:
 rag:
   type: "mock"  # Replace with actual RAG system type
   config:
-    # Add your RAG system configuration here
+  # Add your RAG system configuration here
 
 conversation:
   llm:

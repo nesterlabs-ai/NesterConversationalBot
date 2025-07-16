@@ -3,12 +3,11 @@
 This module handles converting speech audio to text using various STT engines.
 """
 
-import asyncio
-from typing import Optional, Any, Dict
-from loguru import logger
+from typing import Any, Dict
 
-from pipecat.services.whisper.stt import WhisperSTTService
+from loguru import logger
 from pipecat.services.deepgram.stt import DeepgramSTTService
+from pipecat.services.whisper.stt import WhisperSTTService
 
 
 class SpeechToTextService:
@@ -17,7 +16,7 @@ class SpeechToTextService:
     This class encapsulates the speech-to-text functionality and provides
     a clean interface for audio transcription.
     """
-    
+
     def __init__(self, stt_provider: str = "whisper", **kwargs):
         """Initialize the Speech-to-Text service.
         
@@ -28,7 +27,7 @@ class SpeechToTextService:
         self.stt_provider = stt_provider
         self.stt_service = None
         self.config = kwargs
-        
+
     def initialize(self) -> Any:
         """Initialize the STT service based on the provider.
         
@@ -48,10 +47,10 @@ class SpeechToTextService:
             self.stt_service = DeepgramSTTService(api_key=api_key)
         else:
             raise ValueError(f"Unsupported STT provider: {self.stt_provider}")
-        
+
         logger.info(f"Initialized STT service: {self.stt_provider}")
         return self.stt_service
-    
+
     def get_service(self) -> Any:
         """Get the STT service instance.
         
@@ -61,7 +60,7 @@ class SpeechToTextService:
         if self.stt_service is None:
             self.initialize()
         return self.stt_service
-    
+
     def get_config(self) -> Dict[str, Any]:
         """Get the current configuration.
         
@@ -72,7 +71,7 @@ class SpeechToTextService:
             "provider": self.stt_provider,
             "config": self.config
         }
-    
+
     def update_config(self, **kwargs) -> None:
         """Update the configuration.
         
@@ -81,8 +80,8 @@ class SpeechToTextService:
         """
         self.config.update(kwargs)
         logger.info(f"Updated STT config: {kwargs}")
-        
+
         # Re-initialize if service was already created
         if self.stt_service is not None:
             logger.info("Re-initializing STT service with new config")
-            self.initialize() 
+            self.initialize()

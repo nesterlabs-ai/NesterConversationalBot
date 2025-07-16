@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
     <title>Voice RAG Assistant Test Client</title>
     <style>
         body {
@@ -88,33 +88,34 @@
         .log-entry.success {
             color: #009900;
         }
+
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Voice RAG Assistant Test Client</h1>
-        
-        <div id="status" class="status disconnected">
-            Disconnected
-        </div>
-        
-        <div class="controls">
-            <button id="connectBtn" class="primary" onclick="connect()">Connect</button>
-            <button id="disconnectBtn" class="danger" onclick="disconnect()" disabled>Disconnect</button>
-            <br><br>
-            <input type="text" id="sessionId" placeholder="Session ID" value="test_session">
-            <br><br>
-            <button id="startAudioBtn" class="success" onclick="startAudio()" disabled>Start Audio</button>
-            <button id="stopAudioBtn" class="danger" onclick="stopAudio()" disabled>Stop Audio</button>
-        </div>
-        
-        <div>
-            <h3>Log</h3>
-            <div id="log" class="log"></div>
-        </div>
+<div class="container">
+    <h1>Voice RAG Assistant Test Client</h1>
+
+    <div class="status disconnected" id="status">
+        Disconnected
     </div>
 
-    <script>
+    <div class="controls">
+        <button class="primary" id="connectBtn" onclick="connect()">Connect</button>
+        <button class="danger" disabled id="disconnectBtn" onclick="disconnect()">Disconnect</button>
+        <br><br>
+        <input id="sessionId" placeholder="Session ID" type="text" value="test_session">
+        <br><br>
+        <button class="success" disabled id="startAudioBtn" onclick="startAudio()">Start Audio</button>
+        <button class="danger" disabled id="stopAudioBtn" onclick="stopAudio()">Stop Audio</button>
+    </div>
+
+    <div>
+        <h3>Log</h3>
+        <div class="log" id="log"></div>
+    </div>
+</div>
+
+<script>
         let websocket = null;
         let audioContext = null;
         let microphone = null;
@@ -154,7 +155,7 @@
         
         function connect() {
             const sessionId = document.getElementById('sessionId').value || 'test_session';
-            const wsUrl = `ws://localhost:8000/ws/${sessionId}`;
+            const wsUrl = `ws://localhost:7860/ws/${sessionId}`;
             
             log(`Connecting to ${wsUrl}...`);
             
@@ -306,6 +307,7 @@
         // Initialize
         updateStatus(false);
         log('Voice RAG Assistant Test Client initialized');
-    </script>
+
+</script>
 </body>
 </html> 
