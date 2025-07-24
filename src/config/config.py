@@ -10,6 +10,8 @@ from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv(override=True)
+
+
 def _substitute_env_vars(config: Union[Dict, list, str]) -> Union[Dict, list, str]:
     """Recursively substitute environment variables in configuration.
     

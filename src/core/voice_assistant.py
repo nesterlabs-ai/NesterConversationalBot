@@ -86,10 +86,12 @@ class VoiceAssistant:
 
         # Initialize Conversation Manager
         conversation_config = self.config.get("conversation", {})
+        language_config = self.config.get("language", {})
         self.conversation_manager = ConversationManager(
             input_analyzer=self.input_analyzer,
             rag_service=self.rag_service,
-            llm_config=conversation_config.get("llm", {})
+            llm_config=conversation_config.get("llm", {}),
+            language_config=language_config
         )
 
         logger.info("All services initialized successfully")

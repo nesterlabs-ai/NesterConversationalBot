@@ -44,9 +44,23 @@ class TextToSpeechService:
             if not voice_id:
                 raise ValueError("ElevenLabs voice ID is required for elevenlabs provider")
 
+            # Select appropriate voice based on language
+            language = self.config.get("language", "en")
+            support_hinglish = self.config.get("support_hinglish", False)
+            hinglish_voice_id = self.config.get("hinglish_voice_id")
+
+            # Use Hinglish voice if supported and available
+            if support_hinglish and hinglish_voice_id:
+                selected_voice_id = hinglish_voice_id
+                logger.info("Using Hinglish voice for TTS")
+            else:
+                selected_voice_id = voice_id
+                logger.info(f"Using {language} voice for TTS")
+
             self.tts_service = ElevenLabsTTSService(
                 api_key=api_key,
-                voice_id=voice_id
+                voice_id=selected_voice_id,
+                model="eleven_multilingual_v2"
             )
         elif self.tts_provider == "cartesia":
             api_key = self.config.get("api_key")
@@ -57,9 +71,22 @@ class TextToSpeechService:
             if not voice_id:
                 raise ValueError("Cartesia voice ID is required for cartesia provider")
 
+            # Select appropriate voice based on language
+            language = self.config.get("language", "en")
+            support_hinglish = self.config.get("support_hinglish", False)
+            hinglish_voice_id = self.config.get("hinglish_voice_id")
+
+            # Use Hinglish voice if supported and available
+            if support_hinglish and hinglish_voice_id:
+                selected_voice_id = hinglish_voice_id
+                logger.info("Using Hinglish voice for TTS")
+            else:
+                selected_voice_id = voice_id
+                logger.info(f"Using {language} voice for TTS")
+
             self.tts_service = CartesiaTTSService(
                 api_key=api_key,
-                voice_id=voice_id
+                voice_id=selected_voice_id
             )
         else:
             raise ValueError(f"Unsupported TTS provider: {self.tts_provider}")

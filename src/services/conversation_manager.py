@@ -13,7 +13,6 @@ from pipecat.frames.frames import TTSSpeakFrame
 from pipecat.processors.aggregators.openai_llm_context import OpenAILLMContext
 from pipecat.services.google.llm import GoogleLLMService
 from pipecat.services.llm_service import FunctionCallParams, LLMService
-from pipecat.services.openai.llm import OpenAILLMService
 
 from src.services.input_analyzer import InputAnalyzer
 from src.services.rag_service import RAGService
@@ -29,17 +28,20 @@ class ConversationManager:
     def __init__(self,
                  input_analyzer: InputAnalyzer,
                  rag_service: RAGService,
-                 llm_config: Dict[str, Any] = None):
+                 llm_config: Dict[str, Any] = None,
+                 language_config: Dict[str, Any] = None):
         """Initialize the Conversation Manager.
         
         Args:
             input_analyzer: Input analyzer service instance
             rag_service: RAG service instance
             llm_config: Configuration for the LLM service
+            language_config: Language configuration settings
         """
         self.input_analyzer = input_analyzer
         self.rag_service = rag_service
         self.llm_config = llm_config or {}
+        self.language_config = language_config or {}
         self.llm_service = None
         self.tts_service = None
         self.context_aggregator = None
@@ -60,7 +62,7 @@ class ConversationManager:
         self.llm_service = GoogleLLMService(api_key=api_key)
 
         # Register function handlers
-        self.llm_service.register_function("call_rag_system", self._handle_rag_call)
+        # self.llm_service.register_function("call_rag_system", self._handle_rag_call)
         # Removed analyze_user_input function registration - no longer needed
 
         logger.info("Initialized LLM service")
@@ -131,29 +133,43 @@ class ConversationManager:
         Returns:
             OpenAILLMContext for the conversation
         """
-        tools = self.create_function_schemas()
+        # tools = self.create_function_schemas()
 
-        # Strengthened prompt to ensure RAG function results are used
-        system_message = """You are a helpful AI assistant.
+        support_hinglish = self.language_config.get("support_hinglish", False)
+        primary_language = self.language_config.get("primary", "en")
 
-RESPOND DIRECTLY for: greetings, how are you, thank you, goodbye
-USE call_rag_system for: questions about specific topics, facts, or complex information.
-
-CRITICAL: When you receive function results, you MUST use that information as your primary source. 
-Never ignore function results. Always base your response on the function output.
-If call_rag_system returns information, use it directly - do not generate your own answer.
-
-Be conversational and start with "Hey there!" when greeting."""
+        if support_hinglish:
+            system_message = """
+                You are a helpful AI assistant that can understand and respond in both English and Hinglish (Hindi-English mix).
+    
+                RESPOND DIRECTLY for: greetings, how are you, thank you, goodbye (in English or Hinglish)
+    
+                LANGUAGE GUIDELINES:
+                - You can understand both English and Hinglish inputs
+                - Respond in the same language style the user uses
+                - If user speaks in Hinglish, feel free to respond in Hinglish
+                - Common Hinglish phrases: "weather kaisa h?", "aaj rainy weather h", "Handsome dikh rhe ho", "aaj i am feeling awesome" etc.
+                - Mix Hindi and English naturally when appropriate
+    
+                
+            """
+            initial_prompt = """Be conversational and start with "Hey there! Kya haal hai?" when greeting."""
+        else:
+            system_message = """
+                You are a helpful AI assistant.
+                RESPOND DIRECTLY for: greetings, how are you, thank you, goodbye
+            """
+            initial_prompt = "Start a conversation with 'Hey there' and be ready to help answer questions."
 
         messages = [
             {"role": "system", "content": system_message},
             {
                 "role": "user",
-                "content": "Start a conversation with 'Hey there' and be ready to help answer questions using the knowledge base."
+                "content": initial_prompt
             }
         ]
 
-        context = OpenAILLMContext(messages, tools)
+        context = OpenAILLMContext(messages)
         return context
 
     def create_context_aggregator(self) -> Any:

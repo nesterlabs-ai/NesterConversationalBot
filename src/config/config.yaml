@@ -2,6 +2,12 @@
 # This file contains the main configuration structure
 # Sensitive keys are loaded from environment variables
 
+# Language configuration
+language:
+  primary: "en"  # Primary language (en for English, hi for Hindi)
+  support_hinglish: true  # Enable Hinglish support
+  auto_detect: false  # Auto-detect language from speech
+
 stt:
   provider: "deepgram"
   config:
@@ -9,12 +15,18 @@ stt:
     model: "small"
     no_speech_prob: 0.3
     api_key: "${DEEPGRAM_API_KEY}"
+    language: "hi"
+    detect_language: False
+    support_hinglish: True
 
 tts:
   provider: "elevenlabs"
   config:
     api_key: "${ELEVENLABS_API_KEY}"
     voice_id: "${ELEVENLABS_VOICE_ID}"
+    language: "hi"  # Language for TTS voice
+    hinglish_voice_id: "${ELEVENLABS_HINGLISH_VOICE_ID}"
+    support_hinglish: True
 
 input_analyzer:
   custom_patterns:

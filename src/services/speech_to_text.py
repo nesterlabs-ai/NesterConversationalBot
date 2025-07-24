@@ -5,9 +5,60 @@ This module handles converting speech audio to text using various STT engines.
 
 from typing import Any, Dict
 
+import unicodedata
+from deepgram import LiveOptions
 from loguru import logger
+from pipecat.frames.frames import Frame, TranscriptionFrame
+from pipecat.processors.frame_processor import FrameDirection
+from pipecat.services.ai_services import STTService
 from pipecat.services.deepgram.stt import DeepgramSTTService
 from pipecat.services.whisper.stt import WhisperSTTService
+from pipecat.transcriptions.language import Language
+
+
+class TextNormalizedDeepgramSTTService(DeepgramSTTService):
+    """Deepgram STT service that normalizes Unicode text to prevent JSON encoding issues."""
+
+    def __init__(self, api_key: str, live_options: LiveOptions = None, **kwargs):
+        super().__init__(api_key=api_key, live_options=live_options, **kwargs)
+
+    def _normalize_text(self, text: str) -> str:
+        """Normalize Unicode text to prevent JSON encoding issues."""
+        if not text:
+            return text
+
+        try:
+            # Normalize Unicode to NFC form (canonical decomposition, then canonical composition)
+            normalized = unicodedata.normalize('NFC', text)
+            # Ensure it's properly encoded as UTF-8
+            return normalized.encode('utf-8').decode('utf-8')
+        except (UnicodeError, TypeError) as e:
+            logger.warning(f"Text normalization failed for '{text}': {e}")
+            # Fallback: return original text
+            return text
+
+    async def process_frame(self, frame: Frame, direction: FrameDirection) -> None:
+        # Process the frame normally first
+        await super().process_frame(frame, direction)
+
+        # If this generated a transcription frame, intercept and normalize it
+        if isinstance(frame, TranscriptionFrame) and frame.text:
+            normalized_text = self._normalize_text(frame.text)
+            if normalized_text != frame.text:
+                logger.debug(f"Normalized text: '{frame.text}' -> '{normalized_text}'")
+                # Create a new frame with normalized text
+                normalized_frame = TranscriptionFrame(
+                    text=normalized_text,
+                    user_id=frame.user_id,
+                    timestamp=frame.timestamp,
+                    language=getattr(frame, 'language', None)
+                )
+                # Replace the original frame with normalized one
+                await self.push_frame(normalized_frame, direction)
+                return
+        
+        # For all other frames, push as normal
+        await self.push_frame(frame, direction)
 
 
 class SpeechToTextService:
@@ -44,11 +95,39 @@ class SpeechToTextService:
             api_key = self.config.get("api_key")
             if not api_key:
                 raise ValueError("Deepgram API key is required for deepgram provider")
-            self.stt_service = DeepgramSTTService(api_key=api_key)
+
+            # Language configuration for Deepgram
+            language = self.config.get("language", "en")
+            detect_language = self.config.get("detect_language", False)
+
+            # Configure LiveOptions for Deepgram
+            live_options_config = {
+                "model": "nova-3"
+            }
+            if detect_language:
+                live_options_config["detect_language"] = True
+            else:
+                if language == "hi" or self.config.get("support_hinglish", False):
+                    live_options_config["language"] = "multi"
+                else:
+                    language_mapping = {
+                        "en": Language.EN,
+                        "hi": Language.HI
+                    }
+                    live_options_config["language"] = language_mapping.get(language, Language.EN)
+            live_options = LiveOptions(**live_options_config)
+            print(live_options)
+
+            # Create normalized Deepgram STT service
+            self.stt_service = TextNormalizedDeepgramSTTService(
+                api_key=api_key,
+                live_options=live_options
+            )
         else:
             raise ValueError(f"Unsupported STT provider: {self.stt_provider}")
 
-        logger.info(f"Initialized STT service: {self.stt_provider}")
+        language_info = self.config.get("language", "en")
+        logger.info(f"Initialized STT service: {self.stt_provider} with language: {language_info}")
         return self.stt_service
 
     def get_service(self) -> Any:
