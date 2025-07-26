@@ -10,7 +10,6 @@ from deepgram import LiveOptions
 from loguru import logger
 from pipecat.frames.frames import Frame, TranscriptionFrame
 from pipecat.processors.frame_processor import FrameDirection
-from pipecat.services.ai_services import STTService
 from pipecat.services.deepgram.stt import DeepgramSTTService
 from pipecat.services.whisper.stt import WhisperSTTService
 from pipecat.transcriptions.language import Language
@@ -56,7 +55,7 @@ class TextNormalizedDeepgramSTTService(DeepgramSTTService):
                 # Replace the original frame with normalized one
                 await self.push_frame(normalized_frame, direction)
                 return
-        
+
         # For all other frames, push as normal
         await self.push_frame(frame, direction)
 

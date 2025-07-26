@@ -2,16 +2,21 @@
 
 A real-time voice conversational assistant that combines speech-to-text, text-to-speech, RAG (Retrieval-Augmented Generation), and LLM capabilities for natural voice interactions.
 
+**Developed and open-sourced by [NesterLabs](https://nesterlabs.com)**
+
+Optimized for ultra-low latency with response times of 1-1.5 seconds for seamless real-time conversations.
+
 ## 🎯 Features
 
-- **Real-time Voice Conversation**: WebSocket-based audio streaming with low latency
+- **Real-time Voice Conversation**: WebSocket-based audio streaming optimized for 1-1.5 second response times
 - **Speech-to-Text**: Supports Deepgram and Whisper for accurate transcription
 - **Text-to-Speech**: ElevenLabs integration for natural voice synthesis
-- **RAG Integration**: Knowledge retrieval system for context-aware responses
+- **Hinglish Support**: Native support for Hindi-English mixed language conversations
+- **RAG Integration**: Knowledge retrieval system for context-aware responses (dummy implementation included)
 - **LLM Integration**: Google LLM for intelligent conversation management
 - **Latency Monitoring**: Built-in performance analysis and metrics
 - **Flexible Deployment**: FastAPI server or standalone WebSocket server modes
-- **Web Client**: HTML-based test client for easy testing
+- **Function Registration**: Easy registration of new functions as RAG tools
 
 ## 🏗️ Architecture
 
@@ -86,20 +91,14 @@ WEBSOCKET_PORT=8765
 
 4. **Run the server**:
 ```bash
-# Option 1: FastAPI mode (recommended)
-cd src
+# FastAPI mode
+cd ConversationalBot
+export PYTHONPATH=$(pwd)
 python websocket_server.py
-
-# Option 2: Standalone WebSocket server
-WEBSOCKET_SERVER=websocket_server python websocket_server.py
 ```
 
 5. **Test the connection**:
-Open `src/client/test_client.html` in your browser or run:
-```bash
-cd src/client
-python simple_client.py
-```
+See the [Client README](src/client/README.md) for detailed instructions on running and using the client applications.
 
 ## 📁 Project Structure
 
@@ -161,29 +160,9 @@ rag:
 
 ## 🔧 Usage
 
-### Web Client
+### Client Usage
 
-1. Open `src/client/test_client.html` in your browser
-2. Click "Connect" to establish WebSocket connection
-3. Click "Start Audio" to begin voice interaction
-4. Speak naturally - the system will respond with synthesized speech
-
-### Python Client
-
-```python
-from src.core.voice_assistant import VoiceAssistant
-from src.config.config import get_assistant_config
-
-# Initialize with configuration
-config = get_assistant_config()
-assistant = VoiceAssistant(config)
-
-# Create transport (WebSocket, etc.)
-transport = create_your_transport()
-
-# Run the assistant
-await assistant.run(transport)
-```
+For detailed instructions on using the web client and Python client, please refer to the [Client README](src/client/README.md).
 
 ### API Endpoints
 
@@ -223,8 +202,9 @@ WEBSOCKET_SERVER=websocket_server python websocket_server.py
 
 ### RAG Service
 - **Features**: Knowledge retrieval, context enhancement
-- **Extensible**: Replace with your own RAG system
-- **Current**: Mock implementation with sample knowledge
+- **Current Implementation**: Dummy/mock implementation with sample knowledge base
+- **Extensible**: Replace with your actual RAG system (vector databases, document stores, etc.)
+- **Function Integration**: Registered as LLM function call for dynamic knowledge retrieval
 
 ### Conversation Manager
 - **Features**: Context management, conversation flow
@@ -238,6 +218,62 @@ WEBSOCKET_SERVER=websocket_server python websocket_server.py
 
 ## 🔧 Development
 
+## 🌐 Hinglish Support
+
+The system includes native support for Hinglish (Hindi-English mixed language) conversations:
+
+- **Automatic Detection**: Understands both English and Hinglish inputs
+- **Natural Responses**: Responds in the same language style as the user
+- **Translation for RAG**: Automatically translates Hinglish queries to English for RAG system processing
+- **Configuration**: Enable via `language_config.support_hinglish = true`
+
+### Hinglish Examples
+- "weather kaisa h?" → "What is the weather like?"
+- "aaj rainy weather h kya?" → "Is it rainy weather today?"
+- "mujhe kaam ke baare mein batao" → "Tell me about work"
+
+## 🔧 Function Registration as RAG
+
+The system allows you to register custom functions as RAG tools that the LLM can call dynamically:
+
+### 1. Create Your Service
+```python
+class CustomService:
+    async def process_query(self, query: str) -> str:
+        # Your custom logic here
+        return "Custom response"
+```
+
+### 2. Register Function Handler
+```python
+# In conversation_manager.py
+async def _handle_custom_query(self, params: FunctionCallParams) -> None:
+    query = params.arguments.get("query", "")
+    result = await self.custom_service.process_query(query)
+    await params.result_callback(result)
+
+# Register in initialize_llm()
+self.llm_service.register_function("custom_query", self._handle_custom_query)
+```
+
+### 3. Define Function Schema
+```python
+# In create_function_schemas()
+custom_function = FunctionSchema(
+    name="custom_query",
+    description="Process custom queries",
+    properties={
+        "query": {"type": "string", "description": "User query"}
+    },
+    required=["query"]
+)
+```
+
+### 4. Update Configuration
+Add your service configuration to the config files and initialize it in the voice assistant.
+
+## 🛠️ Development
+
 ### Adding New Services
 
 1. Create a service class in `src/services/`
@@ -245,229 +281,18 @@ WEBSOCKET_SERVER=websocket_server python websocket_server.py
 3. Register the service in `VoiceAssistant`
 4. Update configuration as needed
 
-### Function Handlers and Service Integration
-
-The system uses function handlers to enable the LLM to call specific functions and services. This allows for dynamic interaction between the conversation flow and backend services.
-
-#### How Function Handlers Work
-
-Function handlers are registered with the LLM service and can be called during conversation flow. The system currently supports:
-
-1. **RAG System Integration**: Search knowledge base for specific information
-2. **Service Function Calls**: Execute specific operations through the LLM
-3. **Event Handlers**: Respond to function call lifecycle events
-
-#### Registering Function Handlers
-
-In your conversation manager, register function handlers during LLM initialization:
-
-```python
-def initialize_llm(self) -> LLMService:
-    """Initialize the LLM service with function handlers."""
-    # Initialize LLM service
-    self.llm_service = GoogleLLMService(api_key=api_key)
-    
-    # Register function handlers
-    self.llm_service.register_function("call_rag_system", self._handle_rag_call)
-    self.llm_service.register_function("custom_function", self._handle_custom_function)
-    
-    return self.llm_service
-```
-
-#### Creating Custom Function Handlers
-
-Function handlers must be async methods that accept `FunctionCallParams`:
-
-```python
-async def _handle_custom_function(self, params: FunctionCallParams) -> None:
-    """Handle custom function calls from the LLM.
-    
-    Args:
-        params: Function call parameters containing arguments and callback
-    """
-    # Extract arguments passed from LLM
-    user_input = params.arguments.get("input", "")
-    operation_type = params.arguments.get("type", "default")
-    
-    try:
-        # Process the request
-        result = await self.custom_service.process(user_input, operation_type)
-        
-        # Return result to LLM
-        await params.result_callback(result)
-    except Exception as e:
-        logger.error(f"Error in custom function: {e}")
-        error_response = f"Error processing request: {str(e)}"
-        await params.result_callback(error_response)
-```
-
-#### Function Schema Definition
-
-Define function schemas for the LLM to understand available functions:
-
-```python
-def create_function_schemas(self) -> ToolsSchema:
-    """Create function schemas for LLM tool usage."""
-    
-    # RAG system function
-    rag_function = FunctionSchema(
-        name="call_rag_system",
-        description="Search knowledge base for questions requiring specific information",
-        properties={
-            "question": {
-                "type": "string",
-                "description": "The user's question to search for",
-            },
-        },
-        required=["question"],
-    )
-    
-    # Custom function example
-    custom_function = FunctionSchema(
-        name="custom_function",
-        description="Process user input with custom logic",
-        properties={
-            "input": {
-                "type": "string",
-                "description": "User input to process",
-            },
-            "type": {
-                "type": "string",
-                "description": "Type of processing to perform",
-                "enum": ["analyze", "transform", "validate"]
-            },
-        },
-        required=["input"],
-    )
-    
-    return ToolsSchema(standard_tools=[rag_function, custom_function])
-```
-
-#### Event Handlers for Function Calls
-
-Add event handlers to provide feedback during function execution:
-
-```python
-def set_tts_service(self, tts_service: Any) -> None:
-    """Set up TTS service and function call event handlers."""
-    self.tts_service = tts_service
-    
-    if self.llm_service:
-        # Handler for when function calls start
-        @self.llm_service.event_handler("on_function_calls_started")
-        async def on_function_calls_started(service, function_calls):
-            if self.tts_service:
-                await self.tts_service.queue_frame(TTSSpeakFrame("Let me check on that."))
-        
-        # Handler for when function calls complete
-        @self.llm_service.event_handler("on_function_calls_finished")
-        async def on_function_calls_finished(service, function_calls):
-            logger.info(f"Function calls completed: {function_calls}")
-            # Optional: Provide completion feedback
-            if self.tts_service:
-                await self.tts_service.queue_frame(TTSSpeakFrame("Found the information."))
-```
-
-#### Complete Integration Example
-
-Here's a complete example of integrating a new service with function handlers:
-
-```python
-class WeatherService:
-    """Example weather service integration."""
-    
-    def __init__(self, api_key: str):
-        self.api_key = api_key
-    
-    async def get_weather(self, location: str) -> str:
-        """Get weather information for a location."""
-        # Your weather API integration here
-        return f"Weather in {location}: Sunny, 22°C"
-
-class ConversationManager:
-    def __init__(self, weather_service: WeatherService):
-        self.weather_service = weather_service
-        # ... other initialization
-    
-    def initialize_llm(self) -> LLMService:
-        """Initialize LLM with weather function handler."""
-        self.llm_service = GoogleLLMService(api_key=api_key)
-        
-        # Register weather function handler
-        self.llm_service.register_function("get_weather", self._handle_weather_call)
-        
-        return self.llm_service
-    
-    async def _handle_weather_call(self, params: FunctionCallParams) -> None:
-        """Handle weather function calls."""
-        location = params.arguments.get("location", "")
-        
-        try:
-            weather_info = await self.weather_service.get_weather(location)
-            await params.result_callback(weather_info)
-        except Exception as e:
-            error_msg = f"Unable to get weather for {location}: {str(e)}"
-            await params.result_callback(error_msg)
-    
-    def create_function_schemas(self) -> ToolsSchema:
-        """Include weather function in schemas."""
-        weather_function = FunctionSchema(
-            name="get_weather",
-            description="Get current weather information for a location",
-            properties={
-                "location": {
-                    "type": "string",
-                    "description": "City or location name",
-                },
-            },
-            required=["location"],
-        )
-        
-        return ToolsSchema(standard_tools=[weather_function])
-```
-
-#### Best Practices for Function Handlers
-
-1. **Error Handling**: Always wrap function logic in try-catch blocks
-2. **Async Operations**: Use async/await for all function handlers
-3. **Argument Validation**: Validate function arguments before processing
-4. **Logging**: Log function calls for debugging and monitoring
-5. **Timeouts**: Implement timeouts for long-running operations
-6. **Response Format**: Return consistent, well-formatted responses
-
-### Extending RAG Service
-
-Replace the mock RAG service with your implementation:
-
-```python
-class CustomRAGService:
-    def __init__(self, config):
-        # Initialize your RAG system
-        pass
-    
-    def get_response(self, query, context=None):
-        # Your RAG logic here
-        return response
-```
 
 ### Custom LLM Integration
 
-Add support for additional LLM providers:
-
-```python
-# In conversation_manager.py
-def initialize_llm(self):
-    provider = self.llm_config.get("provider", "google")
-    if provider == "custom":
-        return CustomLLMService(self.llm_config)
-```
+Add support for additional LLM providers by extending the conversation manager's `initialize_llm` method.
 
 ## 📊 Monitoring
 
-### Latency Metrics
-- Processing time per component
-- End-to-end response time
-- Real-time performance statistics
+### Latency Optimization
+- **Target Response Time**: 1-1.5 seconds end-to-end
+- **Component-level Monitoring**: Processing time per service (STT, LLM, RAG, TTS)
+- **Real-time Metrics**: Live performance tracking and bottleneck identification
+- **Optimized Pipeline**: Streamlined processing flow for minimal latency
 
 ### Health Checks
 - Service status monitoring
@@ -515,9 +340,45 @@ python websocket_server.py
 4. Add tests if applicable
 5. Submit a pull request
 
+## 🏢 About NesterLabs
+
+This project is developed and open-sourced by **[Nesterlabs](https://nesterlabs.com)**,
+a technology company specializing in AI-powered systems
+and conversational intelligence. At NesterLabs, we combine cutting-edge AI with our proprietary 
+PGI (Perceptual, Goal-driven, Interactive) UX framework to craft user experiences that are 
+not only intelligent and responsive but also deeply engaging and human-centric.
+
+### Custom Implementation Services
+
+For custom voice bot implementations, enterprise RAG systems, or tailored conversational AI solutions, contact NesterLabs:
+
+- **Website**: [https://nesterlabs.com](https://nesterlabs.com)
+- **Email**: contact@nesterlabs.com
+- **Services**: Custom voice assistants, enterprise RAG implementations, AI integration consulting
+
 ## 📄 License
 
-[Add your license information here]
+MIT License
+
+Copyright (c) 2025 NesterLabs
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 
 ## 🙏 Acknowledgments
 
@@ -531,6 +392,7 @@ For questions and support:
 - Create an issue on GitHub
 - Check the troubleshooting section
 - Review the configuration documentation
+- For commercial support and custom implementations: **contact-dev@nesterlabs.com**
 
 ---
 

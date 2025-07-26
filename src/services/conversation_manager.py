@@ -58,12 +58,10 @@ class ConversationManager:
         if not api_key:
             raise ValueError("LLM API key is required")
 
-        # self.llm_service = OpenAILLMService(api_key=api_key)
         self.llm_service = GoogleLLMService(api_key=api_key)
 
         # Register function handlers
-        # self.llm_service.register_function("call_rag_system", self._handle_rag_call)
-        # Removed analyze_user_input function registration - no longer needed
+        self.llm_service.register_function("call_rag_system", self._handle_rag_call)
 
         logger.info("Initialized LLM service")
         return self.llm_service
@@ -104,8 +102,6 @@ class ConversationManager:
             error_response = f"I apologize, but I encountered an error while processing your question: {str(e)}"
             await params.result_callback(error_response)
 
-    # Removed _handle_input_analysis method - no longer needed since we simplified to only use RAG function
-
     def create_function_schemas(self) -> ToolsSchema:
         """Create function schemas for LLM tool usage.
         
@@ -133,7 +129,7 @@ class ConversationManager:
         Returns:
             OpenAILLMContext for the conversation
         """
-        # tools = self.create_function_schemas()
+        tools = self.create_function_schemas()
 
         support_hinglish = self.language_config.get("support_hinglish", False)
         primary_language = self.language_config.get("primary", "en")
@@ -141,15 +137,30 @@ class ConversationManager:
         if support_hinglish:
             system_message = """
                 You are a helpful AI assistant that can understand and respond in both English and Hinglish (Hindi-English mix).
-    
                 RESPOND DIRECTLY for: greetings, how are you, thank you, goodbye (in English or Hinglish)
+                USE call_rag_system for: questions about specific topics, facts, or complex information.
     
+                CRITICAL: When you receive function results, you MUST use that information as your primary source. 
+                Never ignore function results. Always base your response on the function output.
+                If call_rag_system returns information, use it directly - do not generate your own answer.
+
                 LANGUAGE GUIDELINES:
                 - You can understand both English and Hinglish inputs
                 - Respond in the same language style the user uses
                 - If user speaks in Hinglish, feel free to respond in Hinglish
                 - Common Hinglish phrases: "weather kaisa h?", "aaj rainy weather h", "Handsome dikh rhe ho", "aaj i am feeling awesome" etc.
                 - Mix Hindi and English naturally when appropriate
+
+                HINGLISH to ENGLISH TRANSLATION FOR RAG:
+                - When calling call_rag_system, ALWAYS translate Hinglish questions to clear English first
+                - Examples:
+                  * "weather kaisa h?" → "What is the weather like?"
+                  * "aaj rainy weather h kya?" → "Is it rainy weather today?"
+                  * "mujhe kaam ke baare mein batao" → "Tell me about work"
+                  * "office mein meeting kab h?" → "When is the meeting in the office?"
+                - Ensure the English translation captures the full meaning and context
+                - Use proper English grammar and vocabulary for RAG queries
+                - You can convert RAG response to hinglish if user is communicating in hinglish
     
                 
             """
@@ -158,6 +169,11 @@ class ConversationManager:
             system_message = """
                 You are a helpful AI assistant.
                 RESPOND DIRECTLY for: greetings, how are you, thank you, goodbye
+                USE call_rag_system for: questions about specific topics, facts, or complex information.
+    
+                CRITICAL: When you receive function results, you MUST use that information as your primary source. 
+                Never ignore function results. Always base your response on the function output.
+                If call_rag_system returns information, use it directly - do not generate your own answer.
             """
             initial_prompt = "Start a conversation with 'Hey there' and be ready to help answer questions."
 
@@ -169,7 +185,7 @@ class ConversationManager:
             }
         ]
 
-        context = OpenAILLMContext(messages)
+        context = OpenAILLMContext(messages, tools)
         return context
 
     def create_context_aggregator(self) -> Any:

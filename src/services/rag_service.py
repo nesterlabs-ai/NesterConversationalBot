@@ -28,7 +28,7 @@ class RAGService:
         self.knowledge_base = {
             "president": {
                 "keywords": ["president", "usa", "us", "united states", "america", "american president"],
-                "answer": "The current President of the United States is Joe Biden, who took office on January 20, 2021. He serves as the 46th President and was previously the 47th Vice President under Barack Obama from 2009 to 2017."
+                "answer": "The current President of the United States is Donald John Trump, who is serving as the 47th President, having taken office on January 20,2025"
             },
             "conversational_llm": {
                 "keywords": ["conversational llm", "llm", "large language model", "chatbot", "ai assistant",
